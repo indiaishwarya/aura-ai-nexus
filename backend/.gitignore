@@ -9,3 +9,5 @@ env/
 *.db
 *.sqlite3
 static_audio/
+# Ignore the generated audio briefs locally
+audio_briefs_cache/
