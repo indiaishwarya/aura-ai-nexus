@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Header } from '../../components/Header';
 import { TopicSelector } from '../../components/TopicSelector';
 import { PaperCard, CardItem } from '../../components/PaperCard';
-import { Play, Pause, ChevronUp, Calendar, Tag, Volume2, RefreshCw, X, Headphones, BookOpen, Clock } from 'lucide-react';
+import { Play, Pause, ChevronUp, Calendar, Tag, Volume2, RefreshCw, X, Headphones, BookOpen, Clock, LogOut } from 'lucide-react';
 
 const TAXONOMY_MAP: { [key: string]: string } = {
   "cs.AI": "Artificial Intelligence", "cs.LG": "Machine Learning", "cs.CV": "Computer Vision",
@@ -46,7 +46,11 @@ export default function Dashboard() {
   useEffect(() => {
     const raw = localStorage.getItem('aura_interests');
     if (!raw) { router.push('/onboarding'); return; }
-    setSelectedTopics(JSON.parse(raw));
+    try {
+      setSelectedTopics(JSON.parse(raw));
+    } catch(e) {
+      router.push('/onboarding');
+    }
   }, [router]);
 
   useEffect(() => {
@@ -54,6 +58,27 @@ export default function Dashboard() {
     window.addEventListener('scroll', handleScrollVisibility);
     return () => window.removeEventListener('scroll', handleScrollVisibility);
   }, []);
+
+  const handleTopicToggle = (topic: string) => {
+    setSelectedTopics(prev => {
+      const updated = prev.includes(topic) ? prev.filter(t => t !== topic) : [...prev, topic];
+      localStorage.setItem('aura_interests', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('http://127.0.0.1:8000/api/auth/logout', { 
+        method: 'POST', 
+        credentials: 'include' 
+      });
+      localStorage.removeItem('aura_interests');
+      router.push('/');
+    } catch (err) {
+      console.error("Logout error", err);
+    }
+  };
 
   const fetchWorkspaceData = useCallback(async (pageNum: number, currentTopics: string[], append: boolean = false) => {
     if (currentTopics.length === 0) { setCards([]); setLoading(false); return; }
@@ -95,7 +120,6 @@ export default function Dashboard() {
   };
 
   const handleOpenDeepDive = async (dateLabel: string, topicCode: string, sectionPapers: CardItem[]) => {
-    // Stop any active general audio playing before opening modal
     if (audioRef.current) { audioRef.current.pause(); setIsPlaying(false); }
     
     setCurrentTime(0);
@@ -225,8 +249,20 @@ export default function Dashboard() {
               <div ref={observerRef} className="w-full py-6 flex justify-center">{paginationLoading && <RefreshCw className="w-4 h-4 animate-spin text-[#0071e3]" />}</div>
             </div>
           </main>
-          <aside className="lg:col-span-4 lg:sticky lg:top-8 order-1 lg:order-2">
-            <TopicSelector selected={selectedTopics} onToggle={(topic) => setSelectedTopics(p => p.includes(topic) ? p.filter(t => t !== topic) : [...p, topic])} onTriggerIngestionNotify={() => {}} />
+          
+          <aside className="lg:col-span-4 lg:sticky lg:top-8 order-1 lg:order-2 space-y-4">
+            <TopicSelector selected={selectedTopics} onToggle={handleTopicToggle} onTriggerIngestionNotify={() => {}} />
+            
+            {/* Dashboard Sidebar Logout Bar */}
+            <div className="p-3 bg-white/80 backdrop-blur-md border border-slate-200 rounded-2xl shadow-sm">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out Account</span>
+              </button>
+            </div>
           </aside>
         </div>
       </div>

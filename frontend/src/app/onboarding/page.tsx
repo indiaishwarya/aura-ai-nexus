@@ -14,8 +14,21 @@ export default function Onboarding() {
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch from backend on load
   useEffect(() => {
+    // If interests already exist, bypass onboarding and send directly to dashboard
+    const saved = localStorage.getItem('aura_interests');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          router.push('/dashboard');
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to parse interests cache", e);
+      }
+    }
+
     async function loadTaxonomy() {
       try {
         const res = await fetch('http://127.0.0.1:8000/api/taxonomy');
@@ -27,8 +40,9 @@ export default function Onboarding() {
         setLoading(false);
       }
     }
+
     loadTaxonomy();
-  }, []);
+  }, [router]);
 
   const handleToggle = (id: string) => {
     setSelected(prev => 
@@ -37,7 +51,7 @@ export default function Onboarding() {
   };
 
   const handleComplete = () => {
-    if (selected.length < 3) return;
+    if (selected.length < 1) return;
     localStorage.setItem('aura_interests', JSON.stringify(selected));
     router.push('/dashboard');
   };
@@ -54,7 +68,7 @@ export default function Onboarding() {
     <div className="min-h-screen bg-gradient-to-tr from-[#E6F4F1] via-[#F4F9F5] to-[#FFF9F3] p-8 flex flex-col items-center justify-center">
       <div className="max-w-3xl w-full bg-white rounded-3xl p-8 shadow-[0_15px_40px_rgba(0,0,0,0.02)] border border-slate-100">
         <h2 className="text-2xl font-black text-slate-900 tracking-tight text-center mb-2">Configure Vector Pipeline</h2>
-        <p className="text-xs text-slate-400 text-center mb-8 font-semibold uppercase tracking-wider">Select a minimum of 3 domain indices to structure your brief</p>
+        <p className="text-xs text-slate-400 text-center mb-8 font-semibold uppercase tracking-wider">Select a minimum of 1 domain index to structure your brief</p>
         
         {/* Render dynamically fetched list */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -82,14 +96,14 @@ export default function Onboarding() {
 
         <button
           onClick={handleComplete}
-          disabled={selected.length < 3}
+          disabled={selected.length < 1}
           className={`w-full py-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md ${
-            selected.length >= 3 
+            selected.length >= 1 
               ? 'bg-[#0071e3] text-white hover:bg-[#005bb5] cursor-pointer' 
               : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
           }`}
         >
-          Initialize Feed ({selected.length}/3 selected)
+          Initialize Feed ({selected.length} selected)
         </button>
       </div>
     </div>
